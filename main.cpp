@@ -76,7 +76,7 @@ void setup() {
     state = radio.setFrequencyDeviation(50.0);
     state = radio.setRxBandwidth(250.0);
     state = radio.setPreambleLength(4);
-    uint8_t network_id[] = {0x08, 0x4D, 0x7D, 0x42};
+    uint8_t network_id[] = {0xNN, 0xNN, 0xNN, 0xNN}; // remplacer NN par le network id de la chaudiere
     state = radio.setSyncWord(network_id, sizeof(network_id));
 
     initOTA();
