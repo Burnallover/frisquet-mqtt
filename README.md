@@ -7,4 +7,7 @@ It will automatically create a sensor named "Payload frisquet" in Home assistant
 2. user and password for mqtt 
 3. IP of Mosquitto broker
 4. SSID and password of the wifi
+5. boiler id
+
+# How to retrieve the boiler id
 
