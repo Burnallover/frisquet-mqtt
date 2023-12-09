@@ -8,10 +8,11 @@ Most of this code was found on https://forum.hacf.fr/t/pilotage-chaudiere-frisqu
 2. user and password for mqtt 
 3. IP of Mosquitto broker
 4. SSID and password of the wifi
+5. Network id of your boiler
 
-# how to retrieve the boiler id
+# how to retrieve the network boiler id
 
-to retrieve the boiler id you have to: 
+to retrieve the network boiler id you have to: 
 
 1. put this code on the heltec_wifi_lora_32_V3
 ```bash
@@ -44,12 +45,32 @@ void loop() {
     }
 }
 ```
-Delete the Visio module of your boiler and re-add it
-you will see on the console of your Heltec that 3 line will be received.
+Delete the Visio module of your boiler and re-add it.
+you will see on the console of your Heltec that some lines will be received.
 
 ```bash
 RECEIVED [11] : 00 80 33 D8 02 41 04 NN NN NN NN 
 RECEIVED [11] : 00 80 1A 04 02 41 04 NN NN NN NN 
 RECEIVED [14] : 80 08 1A 04 82 41 03 23 12 06 01 27 00 02
 ```
-The NN part is the boiler id
+The NN part is the network boiler id
+
+# Configuration
+
+When you know the network id of your boiler, you can use the code present in the main.cpp of this repository by modifiying lines
+
+```bash
+11 // Configuration Wifi
+12 const char* ssid = "ssid wifi";  // Mettre votre SSID Wifi
+13 const char* password = "wifi password";  // Mettre votre mot de passe Wifi
+```
+```bash
+15 // Définition de l'adresse du broket MQTT
+16 const char* mqttServer = "192.168.XXX.XXX"; // Mettre l'ip du serveur mqtt
+17 const int mqttPort = 1883;
+18 const char* mqttUsername = "mqttUsername"; // Mettre le user mqtt
+19 const char* mqttPassword = "mqttPassword"; // Mettre votre mot de passe mqtt
+```
+```bash
+79 uint8_t network_id[] = {0xNN, 0xNN, 0xNN, 0xNN}; // remplacer NN par le network id de la chaudiere
+```
