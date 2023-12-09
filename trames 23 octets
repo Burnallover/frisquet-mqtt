@@ -1,0 +1,28 @@
+| Byte | Value | Description                                 |
+|------|-------|---------------------------------------------|
+| 1    | 0x80  | Adresse de destination                      |
+| 2    | 0x08  | Adresse de source                           |
+| 3    | 0x6E  | Request Id                                  |
+| 4    | 0x10  | Numéro de message                           |
+| 5    | 0x01  | Type de message (0x17, 0x29, 0x00)           |
+| 6-7  | 0x17  |                                             |
+|      | 0x29  |                                             |
+|      | 0x00  |                                             |
+| 8-15 | Inconnu                                        |
+|      | 0x2F  |                                             |
+|      | 0x00  |                                             |
+|      | 0x04  |                                             |
+|      | 0x08  |                                             |
+| 16-17| 0x00  | Température intérieure x10                  |
+|      | 0xD6  |                                             |
+| 18-19| 0x00  | Température consigne x10                    |
+|      | 0xAF  |                                             |
+| 20   | 0x00  | Inconnu                                     |
+| 21   | 0x20  | Mode                                        |
+|      |       | Bit 0: IN                                    |
+|      |       | Bit 1: OUT                                   |
+|      |       | Bit 2: ?                                     |
+|      |       | Bit 3: ?                                     |
+|      |       | Bit 4: Hors Gel                              |
+|      |       | Bit 5: Auto                                  |
+| 22-23| 0x00  | Inconnu                                     |
