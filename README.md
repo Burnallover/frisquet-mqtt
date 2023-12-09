@@ -12,9 +12,9 @@ Most of this code was found on https://forum.hacf.fr/t/pilotage-chaudiere-frisqu
 
 # how to retrieve the boiler's network ID
 
-to retrieve the boiler's network ID you have to: 
+To retrieve the boiler's network ID you have to: 
 
-1. put this code on the heltec_wifi_lora_32_V3
+1. Put this code on the heltec_wifi_lora_32_V3
 ```bash
 #include <Arduino.h>
 #include <RadioLib.h>
@@ -45,7 +45,7 @@ void loop() {
     }
 }
 ```
-Remove the Visio module from your boiler and readjust it. You'll see on your Heltec console that lines will be received.
+2. Remove the Visio module from your boiler and readjust it. You'll see on your Heltec console that lines will be received.
 
 ```bash
 RECEIVED [11] : 00 80 33 D8 02 41 04 NN NN NN NN 
