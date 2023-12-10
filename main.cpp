@@ -104,8 +104,9 @@ void loop() {
         int len = radio.getPacketLength();
         Serial.printf("RECEIVED [%2d] : ", len);
         message[0] = '\0';
-        for (int i = 0; i < len; i++) 
+        for (int i = 0; i < len; i++) {
             sprintf(message + strlen(message), "%02X ", byteArr[i]);
+            Serial.printf("%02X ", byteArr[i]);}
             client.publish("homeassistant/sensor/frisquet_payload/state", message);
         Serial.println("");
     }
