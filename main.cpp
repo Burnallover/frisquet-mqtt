@@ -31,7 +31,7 @@ void connectToMqtt() {
       Serial.print(client.state());
       Serial.println(" Retrying in 5 seconds...");
       delay(5000);
-    }
+      }
   }
 }
 void connectToTopic() {
@@ -46,6 +46,19 @@ char temperatureConfigPayload[] = R"(
 }
 )";
 client.publish(temperatureConfigTopic, temperatureConfigPayload);
+
+  // Configuration du capteur de température de consigne
+char tempconsigneConfigTopic[] = "homeassistant/sensor/frisquet_consigne/config";
+char tempconsigneConfigPayload[] = R"(
+{
+  "name": "Maison Temperature consigne",
+  "state_topic": "homeassistant/sensor/frisquet_consigne/state",
+  "unit_of_measurement": "°C",
+  "device_class": "temperature"
+}
+)";
+client.publish(tempconsigneConfigTopic, tempconsigneConfigPayload);
+
 // Configuration récupération Payload
 char payloadConfigTopic[] = "homeassistant/sensor/frisquet_payload/config";
 char payloadConfigPayload[] = R"(
@@ -70,16 +83,16 @@ void setup() {
     ESP.restart();
   }
     
-    int state = radio.beginFSK();
-    state = radio.setFrequency(868.96);
-    state = radio.setBitRate(25.0);
-    state = radio.setFrequencyDeviation(50.0);
-    state = radio.setRxBandwidth(250.0);
-    state = radio.setPreambleLength(4);
-    uint8_t network_id[] = {0xNN, 0xNN, 0xNN, 0xNN}; // remplacer NN par le network id de la chaudiere
-    state = radio.setSyncWord(network_id, sizeof(network_id));
+  int state = radio.beginFSK();
+  state = radio.setFrequency(868.96);
+  state = radio.setBitRate(25.0);
+  state = radio.setFrequencyDeviation(50.0);
+  state = radio.setRxBandwidth(250.0);
+  state = radio.setPreambleLength(4);
+  uint8_t network_id[] = {0xNN, 0xNN, 0xNN, 0xNN}; // remplacer NN par le network id de la chaudiere
+  state = radio.setSyncWord(network_id, sizeof(network_id));
 
-    initOTA();
+  initOTA();
   Serial.println("Ready");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
@@ -94,23 +107,51 @@ void loop() {
   if (!client.connected()) {
     connectToMqtt();
   }
-    ArduinoOTA.handle();
-    connectToTopic();
+  ArduinoOTA.handle();
+  connectToTopic();
 
-    char message[255];
-    byte byteArr[RADIOLIB_SX126X_MAX_PACKET_LENGTH];
-    int state = radio.receive(byteArr, 0);
-    if (state == RADIOLIB_ERR_NONE) {
-        int len = radio.getPacketLength();
-        Serial.printf("RECEIVED [%2d] : ", len);
-        message[0] = '\0';
-        for (int i = 0; i < len; i++) {
-            sprintf(message + strlen(message), "%02X ", byteArr[i]);
-            Serial.printf("%02X ", byteArr[i]);}
-            client.publish("homeassistant/sensor/frisquet_payload/state", message);
-        Serial.println("");
+  char message[255];
+  byte byteArr[RADIOLIB_SX126X_MAX_PACKET_LENGTH];
+  int state = radio.receive(byteArr, 0);
+  if (state == RADIOLIB_ERR_NONE) {
+    int len = radio.getPacketLength();
+    Serial.printf("RECEIVED [%2d] : ", len);
+    message[0] = '\0';
+
+    if (len == 23) {  // Check if the length is 23 bytes
+
+      // Extract bytes 16 and 17
+      int decimalValueTemp = byteArr[15] << 8 | byteArr[16];
+      float temperatureValue = decimalValueTemp / 10.0;
+
+      // Extract bytes 18 and 19
+      int decimalValueCons = byteArr[17] << 8 | byteArr[18];
+      float temperatureconsValue = decimalValueCons / 10.0;
+
+      // Publish temperature to the "frisquet_temperature" MQTT topic
+      char temperatureTopic[] = "homeassistant/sensor/frisquet_temperature/state";
+      char temperaturePayload[10];
+      snprintf(temperaturePayload, sizeof(temperaturePayload), "%.2f", temperatureValue);
+      if (!client.publish(temperatureTopic, temperaturePayload)) {
+        Serial.println("Failed to publish temperature to MQTT");
+      }
+      // Publish temperature to the "tempconsigne" MQTT topic
+      char tempconsigneTopic[] = "homeassistant/sensor/frisquet_consigne/state";
+      char tempconsignePayload[10];
+      snprintf(tempconsignePayload, sizeof(tempconsignePayload), "%.2f", temperatureconsValue);
+      if (!client.publish(tempconsigneTopic, tempconsignePayload)) {
+        Serial.println("Failed to publish consigne to MQTT");
+      }
     }
-    client.loop();
+    for (int i = 0; i < len; i++) {
+      sprintf(message + strlen(message), "%02X ", byteArr[i]);
+      Serial.printf("%02X ", byteArr[i]);}
+      if (!client.publish("homeassistant/sensor/frisquet_payload/state", message)) {
+        Serial.println("Failed to publish Payload to MQTT");
+    }
+    Serial.println("");
+  }
+  client.loop();
 }
 
 void initOTA() {
