@@ -5,18 +5,9 @@
 #include <ESPmDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
+#include "config.h"  // Include the configuration file
 
 SX1262 radio = new Module(SS, DIO0, RST_LoRa, BUSY_LoRa); 
-
-// Configuration Wifi
-const char* ssid = "ssid wifi";  // Mettre votre SSID Wifi
-const char* password = "wifi password";  // Mettre votre mot de passe Wifi
-
-// Définition de l'adresse du broket MQTT
-const char* mqttServer = "192.168.XXX.XXX"; // Mettre l'ip du serveur mqtt
-const int mqttPort = 1883;
-const char* mqttUsername = "mqttUsername"; // Mettre le user mqtt
-const char* mqttPassword = "mqttPassword"; // Mettre votre mot de passe mqtt
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -89,7 +80,6 @@ void setup() {
   state = radio.setFrequencyDeviation(50.0);
   state = radio.setRxBandwidth(250.0);
   state = radio.setPreambleLength(4);
-  uint8_t network_id[] = {0xNN, 0xNN, 0xNN, 0xNN}; // remplacer NN par le network id de la chaudiere
   state = radio.setSyncWord(network_id, sizeof(network_id));
 
   initOTA();
