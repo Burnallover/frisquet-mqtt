@@ -56,19 +56,18 @@ The NN part is the boiler's network ID
 
 # Configuration
 
-When you know your boiler's network ID, you can use the code in this repository's main.cpp file to modify the following lines :
+When you know your boiler's network ID, you can use the code in this repository's main.cpp and config.h file, modify the following lines on config.h :
 ```bash
-11 // Configuration Wifi
-12 const char* ssid = "ssid wifi";  // Mettre votre SSID Wifi
-13 const char* password = "wifi password";  // Mettre votre mot de passe Wifi
-```
-```bash
-15 // Définition de l'adresse du broket MQTT
-16 const char* mqttServer = "192.168.XXX.XXX"; // Mettre l'ip du serveur mqtt
-17 const int mqttPort = 1883;
-18 const char* mqttUsername = "mqttUsername"; // Mettre le user mqtt
-19 const char* mqttPassword = "mqttPassword"; // Mettre votre mot de passe mqtt
-```
-```bash
-79 uint8_t network_id[] = {0xNN, 0xNN, 0xNN, 0xNN}; // remplacer NN par le network id de la chaudière
+ // Configuration Wifi
+ const char* ssid = "ssid wifi";  // Mettre votre SSID Wifi
+ const char* password = "wifi password";  // Mettre votre mot de passe Wifi
+
+ // Définition de l'adresse du broket MQTT
+ const char* mqttServer = "192.168.XXX.XXX"; // Mettre l'ip du serveur mqtt
+ const int mqttPort = 1883;
+ const char* mqttUsername = "mqttUsername"; // Mettre le user mqtt
+ const char* mqttPassword = "mqttPassword"; // Mettre votre mot de passe mqtt
+
+
+ uint8_t network_id[] = {0xNN, 0xNN, 0xNN, 0xNN}; // remplacer NN par le network id de la chaudière
 ```
