@@ -5,6 +5,7 @@
 #include <ESPmDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
+#include <heltec.h>
 #include "config.h"  // Include the configuration file
 
 SX1262 radio = new Module(SS, DIO0, RST_LoRa, BUSY_LoRa); 
@@ -73,7 +74,14 @@ void setup() {
     delay(5000);
     ESP.restart();
   }
-    
+
+  // Initialize OLED display
+  Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Disable*/, true /*Serial Enable*/);
+  Heltec.display->init();
+  Heltec.display->flipScreenVertically();
+  Heltec.display->setFont(ArialMT_Plain_10);
+
+  
   int state = radio.beginFSK();
   state = radio.setFrequency(868.96);
   state = radio.setBitRate(25.0);
@@ -132,6 +140,13 @@ void loop() {
       if (!client.publish(tempconsigneTopic, tempconsignePayload)) {
         Serial.println("Failed to publish consigne to MQTT");
       }
+      Heltec.display->clear();
+      Heltec.display->drawString(0, 0, "Temperature: " + String(temperatureValue) + "°C");
+      Heltec.display->drawString(0, 12, "Consigne: " + String(temperatureconsValue) + "°C");
+
+      // Display other information as needed
+
+      Heltec.display->display();
     }
     for (int i = 0; i < len; i++) {
       sprintf(message + strlen(message), "%02X ", byteArr[i]);
