@@ -109,7 +109,7 @@ void setup() {
   client.setServer(mqttServer, mqttPort);
   connectToMqtt();
   connectToTopic();
-}
+
 String byteArrayToHexString(uint8_t* byteArray, int length) {
     String result = "";
     for (int i = 0; i < length; i++) {
@@ -118,6 +118,8 @@ String byteArrayToHexString(uint8_t* byteArray, int length) {
         result += hex;
     }
     return result;
+}
+int counter = 0;
 }
 void loop() {
   // Vérifiez si network_id est égal à la valeur par défaut
@@ -144,7 +146,14 @@ void loop() {
     connectToMqtt();
   }
   ArduinoOTA.handle();
-  connectToTopic();
+  
+    //Compteur pour limiter la déclaration des topic  
+    if (counter >= 100) {
+    connectToTopic();
+    counter = 0;
+    }
+    counter++;
+  
 
   char message[255];
   byte byteArr[RADIOLIB_SX126X_MAX_PACKET_LENGTH];
