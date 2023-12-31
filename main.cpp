@@ -6,8 +6,8 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <heltec.h>
-#include "config.h"  // Include the configuration file
 #include <Preferences.h>
+#include "config.h"  // Include the configuration file
 
 SX1262 radio = new Module(SS, DIO0, RST_LoRa, BUSY_LoRa); 
 Preferences preferences;
@@ -187,6 +187,7 @@ void loop() {
     Serial.println("");
   }
   }
+  preferences.end();
   client.loop();
 }
 
