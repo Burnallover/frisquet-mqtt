@@ -7,8 +7,10 @@
 #include <ArduinoOTA.h>
 #include <heltec.h>
 #include "config.h"  // Include the configuration file
+#include <Preferences.h>
 
 SX1262 radio = new Module(SS, DIO0, RST_LoRa, BUSY_LoRa); 
+Preferences preferences;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -74,7 +76,15 @@ void setup() {
     delay(5000);
     ESP.restart();
   }
+  // Démarrer l'instance de NVS
+  preferences.begin("customId", false); // "customId" est le nom de l'espace de stockage
 
+  // Vérifier si la clé "custom_network_id" existe dans NVS
+  if (preferences.containsKey("custom_network_id")) {
+    // Si la clé existe, lisez la nouvelle valeur
+    size_t network_id_size = preferences.getBytes("custom_network_id", network_id, sizeof(network_id));
+  }
+  
   // Initialize OLED display
   Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Disable*/, true /*Serial Enable*/);
   Heltec.display->init();
@@ -102,6 +112,26 @@ void setup() {
 }
 
 void loop() {
+  // Vérifiez si network_id est égal à la valeur par défaut
+  if (memcmp(network_id, "\xFF\xFF\xFF\xFF", 4) == 0) {
+    // Stockez la nouvelle valeur dans NVS
+    byte byteArr[RADIOLIB_SX126X_MAX_PACKET_LENGTH];
+    int state = radio.receive(byteArr, 0);
+    if (state == RADIOLIB_ERR_NONE) {
+        int len = radio.getPacketLength();
+        Serial.printf("RECEIVED [%2d] : ", len);
+        for (int i = 0; i < len; i++) 
+            Serial.printf("%02X ", byteArr[i]);
+        Serial.println("");
+        if (len == 11) {
+          // Copiez les 4 derniers octets du payload dans custom_network_id
+          for (int i = 0; i < 4; i++) {
+            custom_network_id[i] = byteArr[len - 4 + i];
+          }
+          preferences.putBytes("custom_network_id", custom_network_id, sizeof(custom_network_id));
+          // Maintenant, custom_network_id contient les 4 derniers octets du payload
+        }
+    } else {
   if (!client.connected()) {
     connectToMqtt();
   }
@@ -155,6 +185,7 @@ void loop() {
         Serial.println("Failed to publish Payload to MQTT");
     }
     Serial.println("");
+  }
   }
   client.loop();
 }
