@@ -110,7 +110,15 @@ void setup() {
   connectToMqtt();
   connectToTopic();
 }
-
+String byteArrayToHexString(uint8_t* byteArray, int length) {
+    String result = "";
+    for (int i = 0; i < length; i++) {
+        char hex[3];
+        sprintf(hex, "%02X", byteArray[i]);
+        result += hex;
+    }
+    return result;
+}
 void loop() {
   // Vérifiez si network_id est égal à la valeur par défaut
   if (memcmp(network_id, "\xFF\xFF\xFF\xFF", 4) == 0) {
@@ -171,8 +179,9 @@ void loop() {
         Serial.println("Failed to publish consigne to MQTT");
       }
       Heltec.display->clear();
-      Heltec.display->drawString(0, 0, "Temperature: " + String(temperatureValue) + "°C");
-      Heltec.display->drawString(0, 12, "Consigne: " + String(temperatureconsValue) + "°C");
+      Heltec.display->drawString(0, 0, "Network ID: " + byteArrayToHexString(network_id, 4));
+      Heltec.display->drawString(0, 12, "Temperature: " + String(temperatureValue) + "°C");
+      Heltec.display->drawString(0, 24, "Consigne: " + String(temperatureconsValue) + "°C");
 
       // Display other information as needed
 
