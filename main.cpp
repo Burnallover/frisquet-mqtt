@@ -30,35 +30,40 @@ void connectToMqtt() {
 }
 void connectToTopic() {
   // Configuration du capteur de température
-char temperatureConfigTopic[] = "homeassistant/sensor/frisquet_temperature/config";
+char temperatureConfigTopic[] = "homeassistant/sensor/frisquet/tempAmbiante/config";
 char temperatureConfigPayload[] = R"(
 {
-  "name": "Maison Temperature interieur",
-  "state_topic": "homeassistant/sensor/frisquet_temperature/state",
+  "uniq_id": "frisquet_tempAmbiante",
+  "name": "Frisquet - Temperature ambiante",
+  "state_topic": "homeassistant/sensor/frisquet/tempAmbiante/state",
   "unit_of_measurement": "°C",
-  "device_class": "temperature"
+  "device_class": "temperature",
+  "device":{"ids":["FrisquetConnect"],"mf":"Frisquet","name":"Frisquet Connect","mdl":"Frisquet Connect"}
 }
 )";
 client.publish(temperatureConfigTopic, temperatureConfigPayload);
 
   // Configuration du capteur de température de consigne
-char tempconsigneConfigTopic[] = "homeassistant/sensor/frisquet_consigne/config";
+char tempconsigneConfigTopic[] = "homeassistant/sensor/frisquet/tempConsigne/config";
 char tempconsigneConfigPayload[] = R"(
 {
-  "name": "Maison Temperature consigne",
-  "state_topic": "homeassistant/sensor/frisquet_consigne/state",
+  "uniq_id": "frisquet_tempConsigne",
+  "name": "Frisquet - Temperature consigne",
+  "state_topic": "homeassistant/sensor/frisquet/tempConsigne/state",
   "unit_of_measurement": "°C",
-  "device_class": "temperature"
+  "device_class": "temperature",
+  "device":{"ids":["FrisquetConnect"],"mf":"Frisquet","name":"Frisquet Connect","mdl":"Frisquet Connect"}
 }
 )";
 client.publish(tempconsigneConfigTopic, tempconsigneConfigPayload);
 
 // Configuration récupération Payload
-char payloadConfigTopic[] = "homeassistant/sensor/frisquet_payload/config";
+char payloadConfigTopic[] = "homeassistant/sensor/frisquet/payload/config";
 char payloadConfigPayload[] = R"(
 {
-  "name": "Payload frisquet",
-  "state_topic": "homeassistant/sensor/frisquet_payload/state"
+  "name": "Frisquet - Payload",
+  "state_topic": "homeassistant/sensor/frisquet/payload/state",
+  "device":{"ids":["FrisquetConnect"],"mf":"Frisquet","name":"Frisquet Connect","mdl":"Frisquet Connect"}
 }
 )";
 client.publish(payloadConfigTopic, payloadConfigPayload);
@@ -107,6 +112,7 @@ void setup() {
 
   // Initialisation de la connexion MQTT
   client.setServer(mqttServer, mqttPort);
+  client.setBufferSize(2048);
   connectToMqtt();
   connectToTopic();
 
