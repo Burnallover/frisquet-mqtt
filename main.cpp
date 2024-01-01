@@ -12,6 +12,9 @@
 SX1262 radio = new Module(SS, DIO0, RST_LoRa, BUSY_LoRa); 
 Preferences preferences;
 
+String temperatureExterieure;
+String modeFrisquet;
+
 WiFiClient espClient;
 PubSubClient client(espClient);
 
@@ -93,9 +96,24 @@ client.publish(payloadConfigTopic, payloadConfigPayload);
         "device":{"ids":["FrisquetConnect"],"mf":"Frisquet","name":"Frisquet Connect","mdl":"Frisquet Connect"}
       })";
       client.publish(modeConfigTopic, modeConfigPayload, true); // true pour retenir le message
-    
+    // Souscrire aux topics temp ext et mode
+    client.subscribe(temperatureExtConfigTopic);
+    client.subscribe(modeConfigTopic);
 }
+void callback(char* topic, byte* payload, unsigned int length) {
+    // Convertir le payload en une chaîne de caractères
+    char message[length + 1];
+    strncpy(message, (char*)payload, length);
+    message[length] = '\0';
 
+    // Vérifier le topic et agir en conséquence
+    // Vérifier le topic et mettre à jour les variables globales
+    if (strcmp(topic, temperatureExtConfigTopic) == 0) {
+        temperatureExterieure = String(message);
+    } else if (strcmp(topic, modeConfigTopic) == 0) {
+        modeFrisquet = String(message);
+    }
+}
 void initOTA();
 
 void setup() {
@@ -142,6 +160,8 @@ void setup() {
   client.setBufferSize(2048);
   connectToMqtt();
   connectToTopic();
+  client.setCallback(callback);
+
 
 String byteArrayToHexString(uint8_t* byteArray, int length) {
     String result = "";
@@ -224,6 +244,8 @@ void loop() {
       Heltec.display->drawString(0, 0, "Network ID: " + byteArrayToHexString(network_id, 4));
       Heltec.display->drawString(0, 12, "Temperature: " + String(temperatureValue) + "°C");
       Heltec.display->drawString(0, 24, "Consigne: " + String(temperatureconsValue) + "°C");
+      Heltec.display->drawString(0, 36, "Temp Ext: " + temperatureExterieure + "°C");
+      Heltec.display->drawString(0, 48, "Mode: " + modeFrisquet);
 
       // Display other information as needed
 
