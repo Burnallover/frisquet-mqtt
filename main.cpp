@@ -43,7 +43,21 @@ char temperatureConfigPayload[] = R"(
 )";
 client.publish(temperatureConfigTopic, temperatureConfigPayload);
 
-  // Configuration du capteur de température de consigne
+  // Configuration du capteur de température exterieure
+char temperatureExtConfigTopic[] = "homeassistant/sensor/frisquet/tempExterieure/config";
+char temperatureExtConfigPayload[] = R"(
+{
+  "uniq_id": "frisquet_tempExterieure",
+  "name": "Frisquet - Temperature Exterieure",
+  "state_topic": "homeassistant/sensor/frisquet/tempExterieure/state",
+  "unit_of_measurement": "°C",
+  "device_class": "temperature",
+  "device":{"ids":["FrisquetConnect"],"mf":"Frisquet","name":"Frisquet Connect","mdl":"Frisquet Connect"}
+}
+)";
+client.publish(temperatureExtConfigTopic, temperatureExtConfigPayload);
+  
+// Configuration du capteur de température de consigne
 char tempconsigneConfigTopic[] = "homeassistant/sensor/frisquet/tempConsigne/config";
 char tempconsigneConfigPayload[] = R"(
 {
