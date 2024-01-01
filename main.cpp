@@ -81,6 +81,19 @@ char payloadConfigPayload[] = R"(
 }
 )";
 client.publish(payloadConfigTopic, payloadConfigPayload);
+
+// Publier le message de configuration pour MQTT du mode
+      const char* modeConfigTopic = "homeassistant/input_select/frisquet/mode/config";
+      const char* modeConfigPayload = R"({
+        "uniq_id": "frisquet_mode",
+        "name": "Frisquet - Mode",
+        "state_topic": "homeassistant/input_select/frisquet/mode/state",
+        "command_topic": "frisquet/mode/set",
+        "options": ["Auto", "Confort", "Réduit", "Hors gel"],
+        "device":{"ids":["FrisquetConnect"],"mf":"Frisquet","name":"Frisquet Connect","mdl":"Frisquet Connect"}
+      })";
+      client.publish(modeConfigTopic, modeConfigPayload, true); // true pour retenir le message
+    
 }
 
 void initOTA();
