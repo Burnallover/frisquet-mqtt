@@ -10,6 +10,6 @@ const int mqttPort = 1883;
 const char* mqttUsername = "mqttUsername"; // Mettre le user MQTT
 const char* mqttPassword = "mqttPassword"; // Mettre votre mot de passe MQTT
 
-uint8_t network_id[] = {0xNN, 0xNN, 0xNN, 0xNN}; // Remplacer NN par le network id de la chaudière
+uint8_t network_id[] = {0xFF, 0xFF, 0xFF, 0xFF}; // Remplacer NN par le network id de la chaudière
 
 #endif // CONFIG_H
