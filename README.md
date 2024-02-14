@@ -25,7 +25,7 @@ Some of this code was found on https://forum.hacf.fr/t/pilotage-chaudiere-frisqu
 
 # Configuration
 
-Add your wifi and Mqtt information on the file named 'config.h'
+Add your Wifi and Mqtt information in the file named 'config.h'
 ```bash
  // Configuration Wifi
  const char* ssid = "ssid wifi";  // Mettre votre SSID Wifi
