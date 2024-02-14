@@ -1,8 +1,23 @@
 # Not up to date !!!!!! Coming soon
 
 This arduino code is made for a heltec_wifi_lora_32_V3. 
-It will automatically create three sensor in Home Assistant. one for the actual temperature, one for the setpoint temperature, and one containing the payload received.
-Most of this code was found on https://forum.hacf.fr/t/pilotage-chaudiere-frisquet-eco-radio-system-visio/19814/90
+It will automatically create sensors buttons, and an input select in Home Assistant with Mqtt discovery. 
+Sensors are :
+- Actual temperature
+- Setpoint temperature
+- Outdoor temperature
+- payload received
+  
+Buttons are :
+
+- switch to launch the association of an emulated external temperature sensor
+- switch to launch the association of an emulated Frisquet connect box (in the future)
+
+Input select :
+
+- prefilled mode to manage heating mode of the boiler  
+
+Some of this code has been found on https://forum.hacf.fr/t/pilotage-chaudiere-frisquet-eco-radio-system-visio/19814/90
  
 # Requirement
 
@@ -10,51 +25,36 @@ Most of this code was found on https://forum.hacf.fr/t/pilotage-chaudiere-frisqu
 2. user and password for mqtt 
 3. IP of Mosquitto broker
 4. SSID and password of the wifi
-5. boiler's network ID
 
-# how to retrieve the boiler's network ID
+# Bind your external temp sensor on mqtt
 
-To retrieve the boiler's network ID you have to: 
+Once the program have created all sensors, and before launch the association of an emulated external sensor to the boiler, you must bind an external temperature from Home assistant to the new Mqtt topic created by this program.
 
-1. Put this code on the heltec_wifi_lora_32_V3
+1. Create an automation with UI, and move to Yaml configuration
+2. Put this yaml conf to your automation
 ```bash
-#include <Arduino.h>
-#include <RadioLib.h>
-
-SX1262 radio = new Module(SS, DIO0, RST_LoRa, BUSY_LoRa); 
-
-void setup() {
-    Serial.begin(115200);
-    int state = radio.beginFSK();
-    state = radio.setFrequency(868.96);
-    state = radio.setBitRate(25.0);
-    state = radio.setFrequencyDeviation(50.0);
-    state = radio.setRxBandwidth(250.0);
-    state = radio.setPreambleLength(4);
-    uint8_t network_id[] = {0xFF, 0xFF, 0xFF, 0xFF};
-    state = radio.setSyncWord(network_id, sizeof(network_id));
-}
-
-void loop() {
-    byte byteArr[RADIOLIB_SX126X_MAX_PACKET_LENGTH];
-    int state = radio.receive(byteArr, 0);
-    if (state == RADIOLIB_ERR_NONE) {
-        int len = radio.getPacketLength();
-        Serial.printf("RECEIVED [%2d] : ", len);
-        for (int i = 0; i < len; i++) 
-            Serial.printf("%02X ", byteArr[i]);
-        Serial.println("");
-    }
-}
+alias: Mqtt temperature exterieure
+description: ""
+trigger:
+  - platform: time_pattern
+    minutes: /5 # execution time
+condition: []
+action:
+  - service: mqtt.publish
+    data:
+      qos: "1"
+      retain: true
+      topic: homeassistant/sensor/frisquet/tempExterieure/state
+      payload_template: "{{ states('sensor.your_sensor_temperature') }}" # add the sensor name
+mode: single
 ```
-2. Remove the Visio module from your boiler and readjust it. You'll see on your Heltec console that lines will be received.
-
+If you don't have any sensor for external temp, you can bind the temperature of the integrated weather forecast module of HA with :
 ```bash
-RECEIVED [11] : 00 80 33 D8 02 41 04 NN NN NN NN 
-RECEIVED [11] : 00 80 1A 04 02 41 04 NN NN NN NN 
-RECEIVED [14] : 80 08 1A 04 82 41 03 23 12 06 01 27 00 02
+payload_template: "{{ state_attr('weather.XXXXXX', 'temperature') }}"
 ```
-The NN part is the boiler's network ID
+Not really accurate, but do the job.
+
+3. verify if the temperature is correctly sent to the ESP by looking at the screen, or directly in the device on HA.
 
 # Configuration
 
