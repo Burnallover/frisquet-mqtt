@@ -1,5 +1,3 @@
-# Not up to date !!!!!! Coming soon
-
 This arduino code is made for a heltec_wifi_lora_32_V3. 
 It will automatically create sensors buttons, and an input select in Home Assistant with Mqtt discovery. 
 Sensors are :
@@ -56,20 +54,18 @@ Not really accurate, but do the job.
 
 3. verify if the temperature is correctly sent to the ESP by looking at the screen, or directly in the device on HA.
 
-# Configuration
+# Exterior temperature sensor Association
 
-When you know your boiler's network ID, you can use the code in this repository's main.cpp and config.h file, modify the following lines on config.h :
-```bash
- // Configuration Wifi
- const char* ssid = "ssid wifi";  // Mettre votre SSID Wifi
- const char* password = "wifi password";  // Mettre votre mot de passe Wifi
+If the Exterior temperature sensor is correctly binded, you can begin the association of the Exterior temperature sensor
 
- // Définition de l'adresse du broket MQTT
- const char* mqttServer = "192.168.XXX.XXX"; // Mettre l'ip du serveur mqtt
- const int mqttPort = 1883;
- const char* mqttUsername = "mqttUsername"; // Mettre le user mqtt
- const char* mqttPassword = "mqttPassword"; // Mettre votre mot de passe mqtt
+1. On the Boiler, go to the configuration menu, modify the actual regulation mode and select the line "temperature ambiante + exterieur"
+2. I advice to calculate your actual "pente" based on your region and altitude and to put your calculate pente when it's asked
+3. press ok until the screen ask to associate the exterior sensor
+4. On HA, go to the device and activate the switch that mention "ass. sonde"
+5. Boiler should indicate that the exterior sensor is associated, and ass. sonde button should return to off.
+6. That's all, after 10 minutes, you should have exterior temp. on the boiler screen, and on the Interior satellite screen.
 
+# Tweak
 
- uint8_t network_id[] = {0xNN, 0xNN, 0xNN, 0xNN}; // remplacer NN par le network id de la chaudière
-```
+If you already have your network id, you can put it on the config.h file before flashing your Heltec. it will not change with the exterior sensor association
+If you already have an exterior sensor id from an older association, you can put it aswell on the config.h file, but make sure that the exterior Temp. is correctly binded to the correct mqtt topic.  
