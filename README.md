@@ -2,7 +2,7 @@ This Arduino code is designed for a Heltec WiFi LoRa 32 V3. It will automaticall
 
 - Actual temperature
 - Setpoint temperature
-- Outdoor temperature
+- Exterior temperature
 - payload received
   
 Buttons are :
