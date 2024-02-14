@@ -1,3 +1,5 @@
+# Not up to date !!!!!! Coming soon
+
 This arduino code is made for a heltec_wifi_lora_32_V3. 
 It will automatically create three sensor in Home Assistant. one for the actual temperature, one for the setpoint temperature, and one containing the payload received.
 Most of this code was found on https://forum.hacf.fr/t/pilotage-chaudiere-frisquet-eco-radio-system-visio/19814/90
