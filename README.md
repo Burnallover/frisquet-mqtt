@@ -1,6 +1,20 @@
-This arduino code is made for a heltec_wifi_lora_32_V3. 
-It will automatically create three sensor in Home Assistant. one for the actual temperature, one for the setpoint temperature, and one containing the payload received.
-Most of this code was found on https://forum.hacf.fr/t/pilotage-chaudiere-frisquet-eco-radio-system-visio/19814/90
+This Arduino code is designed for a Heltec WiFi LoRa 32 V3. It will automatically create sensors, buttons and an input select in Home Assistant using MQTT discovery. The sensors are as follows:
+
+- Actual temperature
+- Setpoint temperature
+- Exterior temperature
+- payload received
+  
+Buttons are :
+
+- switch to initiate the association of an emulated external temperature sensor
+- switch to initiate the association of an emulated Frisquet connect box (in the future)
+
+Input select :
+
+- prefilled mode to manage heating mode of the boiler  
+
+Some of this code was found on https://forum.hacf.fr/t/pilotage-chaudiere-frisquet-eco-radio-system-visio/19814/90
  
 # Requirement
 
@@ -8,55 +22,10 @@ Most of this code was found on https://forum.hacf.fr/t/pilotage-chaudiere-frisqu
 2. user and password for mqtt 
 3. IP of Mosquitto broker
 4. SSID and password of the wifi
-5. boiler's network ID
-
-# how to retrieve the boiler's network ID
-
-To retrieve the boiler's network ID you have to: 
-
-1. Put this code on the heltec_wifi_lora_32_V3
-```bash
-#include <Arduino.h>
-#include <RadioLib.h>
-
-SX1262 radio = new Module(SS, DIO0, RST_LoRa, BUSY_LoRa); 
-
-void setup() {
-    Serial.begin(115200);
-    int state = radio.beginFSK();
-    state = radio.setFrequency(868.96);
-    state = radio.setBitRate(25.0);
-    state = radio.setFrequencyDeviation(50.0);
-    state = radio.setRxBandwidth(250.0);
-    state = radio.setPreambleLength(4);
-    uint8_t network_id[] = {0xFF, 0xFF, 0xFF, 0xFF};
-    state = radio.setSyncWord(network_id, sizeof(network_id));
-}
-
-void loop() {
-    byte byteArr[RADIOLIB_SX126X_MAX_PACKET_LENGTH];
-    int state = radio.receive(byteArr, 0);
-    if (state == RADIOLIB_ERR_NONE) {
-        int len = radio.getPacketLength();
-        Serial.printf("RECEIVED [%2d] : ", len);
-        for (int i = 0; i < len; i++) 
-            Serial.printf("%02X ", byteArr[i]);
-        Serial.println("");
-    }
-}
-```
-2. Remove the Visio module from your boiler and readjust it. You'll see on your Heltec console that lines will be received.
-
-```bash
-RECEIVED [11] : 00 80 33 D8 02 41 04 NN NN NN NN 
-RECEIVED [11] : 00 80 1A 04 02 41 04 NN NN NN NN 
-RECEIVED [14] : 80 08 1A 04 82 41 03 23 12 06 01 27 00 02
-```
-The NN part is the boiler's network ID
 
 # Configuration
 
-When you know your boiler's network ID, you can use the code in this repository's main.cpp and config.h file, modify the following lines on config.h :
+Add your Wifi and Mqtt information in the file named 'config.h'
 ```bash
  // Configuration Wifi
  const char* ssid = "ssid wifi";  // Mettre votre SSID Wifi
@@ -67,7 +36,54 @@ When you know your boiler's network ID, you can use the code in this repository'
  const int mqttPort = 1883;
  const char* mqttUsername = "mqttUsername"; // Mettre le user mqtt
  const char* mqttPassword = "mqttPassword"; // Mettre votre mot de passe mqtt
-
-
- uint8_t network_id[] = {0xNN, 0xNN, 0xNN, 0xNN}; // remplacer NN par le network id de la chaudière
 ```
+You can now, flash your Heltec device.
+
+# Bind your external temp sensor on mqtt
+
+After the program has created all sensors, and before launching the association of an emulated external sensor with the boiler, you must bind an external temperature from Home Assistant to the new MQTT topic created by this program.
+
+1. On HA, create an automation with the UI and switch to YAML configuration.
+2. Add this YAML configuration to your automation:
+```bash
+alias: Mqtt temperature exterieure
+description: ""
+trigger:
+  - platform: time_pattern
+    minutes: /5 # execution time
+condition: []
+action:
+  - service: mqtt.publish
+    data:
+      qos: "1"
+      retain: true
+      topic: homeassistant/sensor/frisquet/tempExterieure/state
+      payload_template: "{{ states('sensor.your_sensor_temperature') }}" # add the sensor name
+mode: single
+```
+If you don't have any sensor for external temperature, you can bind the temperature of the integrated weather forecast module of HA with:
+```bash
+payload_template: "{{ state_attr('weather.XXXXXX', 'temperature') }}"
+```
+Though not very accurate, it does the job.
+
+3. Verify if the temperature is correctly sent to the ESP by looking at the screen or directly in the device on HA.
+
+# Exterior temperature sensor Association
+
+If the exterior temperature sensor is correctly bound, you can begin the association of the exterior temperature sensor.
+
+1. On the boiler, go to the configuration menu, modify the actual regulation mode, and select the line "temperature ambiante + exterieur."
+2. I advise calculating your actual "pente" based on your region and altitude and inputting your calculated pente when asked.
+3. Press OK until the screen asks to associate the exterior sensor.
+4. On HA, go to the device and activate the switch that mentions "ass. sonde."
+5. The boiler should indicate that the exterior sensor is associated, and the "ass. sonde" button should return to off.
+
+That's all; after 10 minutes, Heltec scren should update, you should have the exterior temperature displayed on the boiler screen and on the interior satellite screen.
+
+# Tweak
+After the initial association, the network ID and the exterior sensor ID are written on the first line of the Heltec's screen as well as in the console. Even though this data is normally stored in the ESP's NVS memory, I advise you to save them to avoid starting over in case of a major update that would overwrite this memory.
+
+If you already have your network ID, you can put it in the 'config.h' file before flashing your Heltec. It will not change with the exterior sensor association.
+
+If you already have an exterior sensor ID from an older association, you can also put it in the 'config.h' file, but make sure that the exterior temperature is correctly bound to the correct MQTT topic.
