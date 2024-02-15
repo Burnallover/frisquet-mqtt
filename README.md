@@ -87,3 +87,5 @@ After the initial association, the network ID and the exterior sensor ID are wri
 If you already have your network ID, you can put it in the 'config.h' file before flashing your Heltec. It will not change with the exterior sensor association.
 
 If you already have an exterior sensor ID from an older association, you can also put it in the 'config.h' file, but make sure that the exterior temperature is correctly bound to the correct MQTT topic.
+
+If your boiler does not display the 'OK' association message, it's likely that your ESP is too far from your boiler. The Heltec is capable of receiving frames over very long distances, but its frame transmission is not very powerful.
