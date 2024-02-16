@@ -23,6 +23,7 @@ String tempConsigne;
 String modeFrisquet;
 String assSonFrisquet;
 String assConFrisquet;
+String eraseNvsFrisquet;
 String byteArrayToHexString(uint8_t *byteArray, int length);
 byte extSonTempBytes[2];
 byte sonMsgNum = 0x01;
@@ -46,7 +47,6 @@ bool tempConsigneChanged = false;
 bool modeFrisquetChanged = false;
 bool assSonFrisquetChanged = false;
 bool assConFrisquetChanged = false;
-bool eraseNvs = false;
 // Constantes pour les topics MQTT
 const char *TEMP_AMBIANTE1_TOPIC = "homeassistant/sensor/frisquet/tempAmbiante1/state";
 const char *TEMP_EXTERIEURE_TOPIC = "homeassistant/sensor/frisquet/tempExterieure/state";
@@ -54,8 +54,45 @@ const char *TEMP_CONSIGNE1_TOPIC = "homeassistant/sensor/frisquet/tempConsigne1/
 const char *MODE_TOPIC = "homeassistant/select/frisquet/mode/set";
 const char *ASS_SON_TOPIC = "homeassistant/switch/frisquet/asssonde/set";
 const char *ASS_CON_TOPIC = "homeassistant/switch/frisquet/assconnect/set";
+const char *RES_NVS_TOPIC = "homeassistant/switch/frisquet/erasenvs/set";
 uint8_t TempExTx[] = {0x80, 0x20, 0x00, 0x00, 0x01, 0x17, 0x9c, 0x54, 0x00, 0x04, 0xa0, 0x29, 0x00, 0x01, 0x02, 0x00, 0x00}; // envoi température
 byte TxByteArr[10] = {0x80, 0x20, 0x00, 0x00, 0x82, 0x41, 0x01, 0x21, 0x01, 0x02};                                           // association Sonde exterieure
+//****************************************************************************
+// Fonction pour publier un message MQTT
+void publishMessage(const char *topic, const char *payload)
+{
+  if (!client.publish(topic, payload))
+  {
+    Serial.println("Failed to publish message to MQTT");
+  }
+}
+//****************************************************************************
+void eraseNvs()
+{
+  preferences.begin("net-conf", false); // Ouvrir la mémoire NVS en mode lecture/écriture
+  preferences.clear();                  // Effacer complètement la mémoire NVS
+  publishMessage("homeassistant/switch/frisquet/erasenvs/state", "OFF");
+  eraseNvsFrisquet = "OFF";
+}
+//****************************************************************************
+void initNvs()
+{
+// Démarre l'instance de NVS
+  preferences.begin("net-conf", false); // "customId" est le nom de l'espace de stockage
+  // Déclare l'id de sonde externe
+  custom_extSon_id = (extSon_id == 0xFF) ? preferences.getUChar("son_id", 0) : extSon_id;
+  // Vérifie si la clé "custom_network_id" existe dans NVS
+  size_t custom_network_id_size = preferences.getBytes("net_id", custom_network_id, sizeof(custom_network_id));
+  // Vérifie si custom_network_id est différent de {0xFF, 0xFF, 0xFF, 0xFF} ou si la clé n'existe pas dans NVS
+  if (custom_network_id_size != sizeof(custom_network_id) || memcmp(custom_network_id, "\xFF\xFF\xFF\xFF", sizeof(custom_network_id)) == 0)
+  {
+    // Copie la valeur de network_id ou def_Network_id dans custom_network_id
+    memcpy(custom_network_id, (memcmp(network_id, "\xFF\xFF\xFF\xFF", sizeof(network_id)) != 0) ? network_id : def_Network_id, sizeof(custom_network_id));
+    // Enregistre custom_network_id dans NVS
+    preferences.putBytes("net_id", custom_network_id, sizeof(custom_network_id));
+    preferences.end(); // Ferme la mémoire NVS
+  }
+}
 //****************************************************************************
 void sendTxByteArr()
 {
@@ -169,6 +206,15 @@ void callback(char *topic, byte *payload, unsigned int length)
       client.publish("homeassistant/switch/frisquet/assconnect/state", message);
     }
   }
+  else if (strcmp(topic, RES_NVS_TOPIC) == 0)
+  {
+    if (eraseNvsFrisquet != String(message))
+    {
+      eraseNvsFrisquet = String(message);
+      assConFrisquetChanged = true;
+      client.publish("homeassistant/switch/frisquet/erasenvs/state", message);
+    }
+  }
 }
 //****************************************************************************
 void DateTime()
@@ -212,15 +258,6 @@ void txConfiguration()
   state = radio.setRxBandwidth(250.0);
   state = radio.setPreambleLength(4);
   state = radio.setSyncWord(custom_network_id, sizeof(custom_network_id));
-}
-//****************************************************************************
-// Fonction pour publier un message MQTT
-void publishMessage(const char *topic, const char *payload)
-{
-  if (!client.publish(topic, payload))
-  {
-    Serial.println("Failed to publish message to MQTT");
-  }
 }
 //****************************************************************************
 void connectToMqtt()
@@ -288,6 +325,8 @@ void connectToTopic()
   connectToSensor("tempConsigne1", "consigne Z1");
   connectToSwitch("asssonde", "ass. sonde");
   connectToSwitch("assconnect", "ass. connect");
+  connectToSwitch("erasenvs", "erase NVS");
+
   if (sensorZ2 == true)
   {
     connectToSensor("tempAmbiante2", "ambiante Z2");
@@ -424,25 +463,9 @@ void setup()
     ESP.restart();
   }
   timeClient.begin(); // Démarre le client NTP
-  // Démarre l'instance de NVS
-  preferences.begin("net-conf", false); // "customId" est le nom de l'espace de stockage
-  if (eraseNvs)
-  {
-    preferences.begin("net-conf", false); // Ouvrir la mémoire NVS en mode lecture/écriture
-    preferences.clear();                  // Effacer complètement la mémoire NVS
-  }
-  // Déclare l'id de sonde externe
-  custom_extSon_id = (extSon_id == 0xFF) ? preferences.getUChar("son_id", 0) : extSon_id;
-  // Vérifie si la clé "custom_network_id" existe dans NVS
-  size_t custom_network_id_size = preferences.getBytes("net_id", custom_network_id, sizeof(custom_network_id));
-  // Vérifie si custom_network_id est différent de {0xFF, 0xFF, 0xFF, 0xFF} ou si la clé n'existe pas dans NVS
-  if (custom_network_id_size != sizeof(custom_network_id) || memcmp(custom_network_id, "\xFF\xFF\xFF\xFF", sizeof(custom_network_id)) == 0)
-  {
-    // Copie la valeur de network_id ou def_Network_id dans custom_network_id
-    memcpy(custom_network_id, (memcmp(network_id, "\xFF\xFF\xFF\xFF", sizeof(network_id)) != 0) ? network_id : def_Network_id, sizeof(custom_network_id));
-    // Enregistre custom_network_id dans NVS
-    preferences.putBytes("net_id", custom_network_id, sizeof(custom_network_id));
-  }
+  
+  initNvs(); // écrit dans la nvs les bytes nécéssaires
+
   // Initialize OLED display
   Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Disable*/, true /*Serial Enable*/);
   Heltec.display->init();
@@ -469,7 +492,11 @@ void setup()
 void loop()
 {
   // DateTime();
-  // Vérifiez si custom_network_id est égal à la valeur par défaut
+  if (eraseNvsFrisquet == "ON")
+  {
+    eraseNvs();
+    initNvs();
+  }
   if (assSonFrisquet == "ON")
   {
     assExtSonde();
