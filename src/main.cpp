@@ -434,12 +434,15 @@ void connectToTopic()
   connectToSensor("tempExterieure", "exterieure");
   connectToSensor("tempConsigne1", "consigne Z1");
   connectToSensor("tempCDC", "corps de chauffe");
-  connectToSensor("tempECS", "eau chaude sanitaire");
+  
   connectToSensor("tempDepart", "depart");
   connectToSwitch("asssonde", "ass. sonde");
   connectToSwitch("assconnect", "ass. connect");
   connectToSwitch("erasenvs", "erase NVS");
-
+  if (sensorecs == true)
+  {
+    connectToSensor("tempECS", "eau chaude sanitaire");
+  }
   if (sensorZ2 == true)
   {
     connectToSensor("tempAmbiante2", "ambiante Z2");
@@ -483,17 +486,20 @@ void connectToTopic()
   client.publish(consoChConfigTopic, consoChConfigPayload, true); // true pour retenir le message
 
    // Publier le message de configuration pour MQTT de la consommation gaz pour l'eau chaude
-  char consoEcsConfigTopic[] = "homeassistant/sensor/frisquet/consogaz-ecs/config";
-  char consoEcsConfigPayload[] = R"({
-        "uniq_id": "frisquet_consogaz_ecs",
-        "name": "consommation gaz ECS",
-        "state_topic": "homeassistant/sensor/frisquet/consogaz-ecs/state",
-        "unit_of_measurement": "kWh",
-        "device_class": "energy",
-        "state_class": "total",
-        "device":{"ids":["Frisquet_MQTT"],"mf":"HA Community","name":"Frisquet MQTT","mdl":"ESP32 Heltec"}
-      })";
-  client.publish(consoEcsConfigTopic, consoEcsConfigPayload, true); // true pour retenir le message
+  if (sensorecs == true)
+  { 
+    char consoEcsConfigTopic[] = "homeassistant/sensor/frisquet/consogaz-ecs/config";
+    char consoEcsConfigPayload[] = R"({
+          "uniq_id": "frisquet_consogaz_ecs",
+          "name": "consommation gaz ECS",
+          "state_topic": "homeassistant/sensor/frisquet/consogaz-ecs/state",
+          "unit_of_measurement": "kWh",
+          "device_class": "energy",
+          "state_class": "total",
+          "device":{"ids":["Frisquet_MQTT"],"mf":"HA Community","name":"Frisquet MQTT","mdl":"ESP32 Heltec"}
+        })";
+    client.publish(consoEcsConfigTopic, consoEcsConfigPayload, true); // true pour retenir le message
+  }
 
   // Souscrire aux topics temp ambiante, consigne, ext et mode
   client.subscribe(MODE_TOPIC);
@@ -855,12 +861,15 @@ void handleRadioPacket(byte *byteArr, int len)
     {
       if (byteArr[0] == 0x7e && byteArr[1] == 0x80 && byteArr[3] == msg79e0 && byteArr[4] == 0x81 && byteArr[5] == 0x03)
       {
-        // Extract bytes 8 and 9 ECS
-        int decimalValue1 = byteArr[7] << 8 | byteArr[8];
-        float ecsValue = decimalValue1 / 10.0;
-        char tempECS[10];
-        snprintf(tempECS, sizeof(tempECS), "%.2f", ecsValue);
-        publishMessage("homeassistant/sensor/frisquet/tempECS/state", tempECS);
+        if (sensorecs == true)
+        {
+          // Extract bytes 8 and 9 ECS
+          int decimalValue1 = byteArr[7] << 8 | byteArr[8];
+          float ecsValue = decimalValue1 / 10.0;
+          char tempECS[10];
+          snprintf(tempECS, sizeof(tempECS), "%.2f", ecsValue);
+          publishMessage("homeassistant/sensor/frisquet/tempECS/state", tempECS);
+        }
         // Extract bytes 10 and 11 CDC
         int decimalValue2 = byteArr[9] << 8 | byteArr[10];
         float cdcValue = decimalValue2 / 10.0;
@@ -894,13 +903,15 @@ void handleRadioPacket(byte *byteArr, int len)
         char consoGazCh[10];
         snprintf(consoGazCh, sizeof(consoGazCh), "%d", decimalValue1);
         publishMessage("homeassistant/sensor/frisquet/consogaz-ch/state", consoGazCh);
-
-        // Extract bytes 26 and 27 conso gaz de la veille
-        int decimalValue2 = byteArr[25] << 8 | byteArr[26];
-        // float gazValue = decimalValue1;
-        char consoGazEcs[10];
-        snprintf(consoGazEcs, sizeof(consoGazEcs), "%d", decimalValue2);
-        publishMessage("homeassistant/sensor/frisquet/consogaz-ecs/state", consoGazEcs);
+        if (sensorecs == true)
+        {
+          // Extract bytes 26 and 27 conso gaz de la veille
+          int decimalValue2 = byteArr[25] << 8 | byteArr[26];
+          // float gazValue = decimalValue1;
+          char consoGazEcs[10];
+          snprintf(consoGazEcs, sizeof(consoGazEcs), "%d", decimalValue2);
+          publishMessage("homeassistant/sensor/frisquet/consogaz-ecs/state", consoGazEcs);
+        }
       }
       else if (byteArr[0] == 0x7e && byteArr[1] == 0x80 && byteArr[4] == 0x08 && byteArr[5] == 0x17)
       {
