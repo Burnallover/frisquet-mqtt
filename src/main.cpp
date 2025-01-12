@@ -58,6 +58,7 @@ float extSonVal;
 WiFiClient espClient;
 PubSubClient client(espClient);
 bool waitingForResponse = false;
+bool waitingForResponse2 = false;
 bool sequenceMsg = true;
 unsigned long startWaitTime = 0;
 unsigned long lastTxModeTime = 0;
@@ -209,7 +210,7 @@ void txConfiguration()
   state = radio.setSyncWord(custom_network_id, sizeof(custom_network_id));
 }
 //****************************************************************************
-void handleModeChange(const char *newMode)
+void handleModeChange(const char *newMode,uint8_t zone)
 {
   // Déterminer la valeur du mode à transmettre avec un switch
   uint8_t modeValue1 = 0x00; // Par défaut, valeur invalide
@@ -248,6 +249,7 @@ void handleModeChange(const char *newMode)
   // Assigner la valeur du mode à TxByteArrConMod
   TxByteArrConMod[2] = custom_friCon_id;
   TxByteArrConMod[3] = conMsgNum;
+  TxByteArrConMod[4]= zone;
   TxByteArrConMod[18] = modeValue1;
   TxByteArrConMod[19] = modeValue2;
 
@@ -261,7 +263,14 @@ void handleModeChange(const char *newMode)
   int state = radio.transmit(TxByteArrConMod, sizeof(TxByteArrConMod));
   if (state == RADIOLIB_ERR_NONE)
   {
-    waitingForResponse = true;
+    if (zone == 0x09)
+    {
+      waitingForResponse2 = true;
+    }
+    else
+    {
+      waitingForResponse = true;
+    }
   }
   else
   {
@@ -337,7 +346,17 @@ void callback(char *topic, byte *payload, unsigned int length)
     {
       modeFrisquet = String(message);
       modeFrisquetChanged = true;
-      handleModeChange(message);
+      handleModeChange(message,0x08);
+      startWaitTime = millis(); // On note le début de l’attente
+    }
+  }
+  else if (strcmp(topic, MODE_TOPIC2) == 0)
+  {
+    if (modeFrisquet2 != String(message))
+    {
+      modeFrisquet2 = String(message);
+      modeFrisquet2Changed = true;
+      handleModeChange(message,0x09);
       startWaitTime = millis(); // On note le début de l’attente
     }
   }
@@ -771,7 +790,34 @@ bool assFriCon()
   return result;
 }
 //****************************************************************************
-void initOTA();
+void initOTA()
+{
+  ArduinoOTA.setHostname("ESP32Frisquet");
+  ArduinoOTA.setTimeout(25); // Augmenter le délai d'attente à 25 secondes
+  ArduinoOTA
+      .onStart([]()
+               {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH)
+      type = "sketch";
+    else // U_SPIFFS
+      type = "filesystem";
+    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+    DBG_PRINTLN("Start updating " + type); })
+      .onEnd([]()
+             { DBG_PRINTLN(F("\nEnd")); })
+      .onProgress([](unsigned int progress, unsigned int total)
+                  { Serial.printf("Progress: %u%%\r", (progress / (total / 100))); })
+      .onError([](ota_error_t error)
+               {
+    Serial.printf("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) DBG_PRINTLN(F("Auth Failed"));
+    else if (error == OTA_BEGIN_ERROR) DBG_PRINTLN(F("Begin Failed"));
+    else if (error == OTA_CONNECT_ERROR) DBG_PRINTLN(F("Connect Failed"));
+    else if (error == OTA_RECEIVE_ERROR) DBG_PRINTLN(F("Receive Failed"));
+    else if (error == OTA_END_ERROR) DBG_PRINTLN(F("End Failed")); });
+  ArduinoOTA.begin();
+}
 //****************************************************************************
 void setFlag(void)
 {
@@ -1188,7 +1234,28 @@ void loop()
         // Réenvoi toutes les 2 secondes
         if (currentTime - lastTxModeTime >= retryInterval)
         {
-          handleModeChange(modeFrisquet.c_str());
+          handleModeChange(modeFrisquet.c_str(),0x08);
+          // int state = radio.transmit(TxByteArrConMod, sizeof(TxByteArrConMod));
+          lastTxModeTime = currentTime;
+        }
+      }
+    }
+    if (waitingForResponse2)
+    {
+      unsigned long currentTime = millis();
+
+      // Vérification du timeout des 4 minutes
+      if (currentTime - startWaitTime >= maxWaitTime)
+      {
+        waitingForResponse2 = false;
+        DBG_PRINTLN("Timeout mode");
+      }
+      else
+      {
+        // Réenvoi toutes les 2 secondes
+        if (currentTime - lastTxModeTime >= retryInterval)
+        {
+          handleModeChange(modeFrisquet2.c_str(),0x09);
           // int state = radio.transmit(TxByteArrConMod, sizeof(TxByteArrConMod));
           lastTxModeTime = currentTime;
         }
@@ -1211,31 +1278,4 @@ String byteArrayToHexString(uint8_t *byteArray, int length)
   return result;
 }
 //************************************************************
-void initOTA()
-{
-  ArduinoOTA.setHostname("ESP32Frisquet");
-  ArduinoOTA.setTimeout(25); // Augmenter le délai d'attente à 25 secondes
-  ArduinoOTA
-      .onStart([]()
-               {
-    String type;
-    if (ArduinoOTA.getCommand() == U_FLASH)
-      type = "sketch";
-    else // U_SPIFFS
-      type = "filesystem";
-    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-    DBG_PRINTLN("Start updating " + type); })
-      .onEnd([]()
-             { DBG_PRINTLN(F("\nEnd")); })
-      .onProgress([](unsigned int progress, unsigned int total)
-                  { Serial.printf("Progress: %u%%\r", (progress / (total / 100))); })
-      .onError([](ota_error_t error)
-               {
-    Serial.printf("Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR) DBG_PRINTLN(F("Auth Failed"));
-    else if (error == OTA_BEGIN_ERROR) DBG_PRINTLN(F("Begin Failed"));
-    else if (error == OTA_CONNECT_ERROR) DBG_PRINTLN(F("Connect Failed"));
-    else if (error == OTA_RECEIVE_ERROR) DBG_PRINTLN(F("Receive Failed"));
-    else if (error == OTA_END_ERROR) DBG_PRINTLN(F("End Failed")); });
-  ArduinoOTA.begin();
-}
+
