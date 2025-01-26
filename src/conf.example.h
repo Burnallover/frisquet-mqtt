@@ -12,6 +12,8 @@ const char* mqttUsername = "mqttUsername"; // Mettre le user MQTT
 const char* mqttPassword = "mqttPassword"; // Mettre votre mot de passe MQTT
 //activation sensor Zone 2
 const bool sensorZ2 = false;
+//activation eau chaude saniataire
+const bool sensorecs = true;
 
 // network id & ext.sonde id if they are known
 uint8_t network_id[] = {0xFF, 0xFF, 0xFF, 0xFF};

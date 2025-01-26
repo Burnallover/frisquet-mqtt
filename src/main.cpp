@@ -36,6 +36,7 @@ String tempAmbiante;
 String tempExterieure;
 String tempConsigne;
 String modeFrisquet;
+String modeFrisquet2;
 String tempAmbiante2;
 String tempConsigne2;
 String assSonFrisquet;
@@ -57,6 +58,7 @@ float extSonVal;
 WiFiClient espClient;
 PubSubClient client(espClient);
 bool waitingForResponse = false;
+bool waitingForResponse2 = false;
 bool sequenceMsg = true;
 unsigned long startWaitTime = 0;
 unsigned long lastTxModeTime = 0;
@@ -65,9 +67,12 @@ const unsigned long retryInterval = 2500; // 2.5 secondes en ms
 const char hexDigits[] = "0123456789ABCDEF";
 // Drapeaux pour indiquer si les données ont changé
 bool tempAmbianteChanged = false;
+bool tempAmbiante2Changed = false;
 bool tempExterieureChanged = false;
 bool tempConsigneChanged = false;
+bool tempConsigne2Changed = false;
 bool modeFrisquetChanged = false;
+bool modeFrisquet2Changed = false;
 bool assSonFrisquetChanged = false;
 bool assConFrisquetChanged = false;
 // Constantes pour les topics MQTT
@@ -76,7 +81,10 @@ const char *TEMP_EXTERIEURE_TOPIC = "homeassistant/sensor/frisquet/tempExterieur
 const char *TEMP_CONSIGNE1_TOPIC = "homeassistant/sensor/frisquet/tempConsigne1/state";
 const char *TEMP_AMBIANTE2_TOPIC = "homeassistant/sensor/frisquet/tempAmbiante2/state";
 const char *TEMP_CONSIGNE2_TOPIC = "homeassistant/sensor/frisquet/tempConsigne2/state";
+const char *MODE_TOPIC_STATE = "homeassistant/select/frisquet/mode/state";
+const char *MODE_TOPIC2_STATE = "homeassistant/select/frisquet/mode2/state";
 const char *MODE_TOPIC = "homeassistant/select/frisquet/mode/set";
+const char *MODE_TOPIC2 = "homeassistant/select/frisquet/mode2/set";
 const char *ASS_SON_TOPIC = "homeassistant/switch/frisquet/asssonde/set";
 const char *ASS_CON_TOPIC = "homeassistant/switch/frisquet/assconnect/set";
 const char *RES_NVS_TOPIC = "homeassistant/switch/frisquet/erasenvs/set";
@@ -153,7 +161,7 @@ void initNvs()
 //****************************************************************************
 void updateDisplay()
 {
-  if (tempAmbianteChanged || tempExterieureChanged || tempConsigneChanged || modeFrisquetChanged)
+  if (tempAmbianteChanged || tempExterieureChanged || tempConsigneChanged || modeFrisquetChanged || tempAmbiante2Changed || tempConsigne2Changed || modeFrisquet2Changed)
   {
     Heltec.display->clear();
     Heltec.display->drawString(0, 0, "Net: " + byteArrayToHexString(custom_network_id, sizeof(custom_network_id)));
@@ -164,6 +172,10 @@ void updateDisplay()
     if(sensorZ2) {
       Heltec.display->drawString(0, 44, "T° Amb2: " + tempAmbiante2 + "°C");
       Heltec.display->drawString(0, 55, "T° Con2: " + tempConsigne2 + "°C");
+
+    tempAmbiante2Changed = false;
+    tempConsigne2Changed = false;
+    modeFrisquet2Changed = false;
     }
 
     Heltec.display->display();
@@ -171,6 +183,7 @@ void updateDisplay()
     tempExterieureChanged = false;
     tempConsigneChanged = false;
     modeFrisquetChanged = false;
+
   }
   else if (assSonFrisquetChanged || assConFrisquetChanged)
   {
@@ -197,7 +210,7 @@ void txConfiguration()
   state = radio.setSyncWord(custom_network_id, sizeof(custom_network_id));
 }
 //****************************************************************************
-void handleModeChange(const char *newMode)
+void handleModeChange(const char *newMode,uint8_t zone)
 {
   // Déterminer la valeur du mode à transmettre avec un switch
   uint8_t modeValue1 = 0x00; // Par défaut, valeur invalide
@@ -236,6 +249,7 @@ void handleModeChange(const char *newMode)
   // Assigner la valeur du mode à TxByteArrConMod
   TxByteArrConMod[2] = custom_friCon_id;
   TxByteArrConMod[3] = conMsgNum;
+  TxByteArrConMod[4]= zone;
   TxByteArrConMod[18] = modeValue1;
   TxByteArrConMod[19] = modeValue2;
 
@@ -249,7 +263,14 @@ void handleModeChange(const char *newMode)
   int state = radio.transmit(TxByteArrConMod, sizeof(TxByteArrConMod));
   if (state == RADIOLIB_ERR_NONE)
   {
-    waitingForResponse = true;
+    if (zone == 0x09)
+    {
+      waitingForResponse2 = true;
+    }
+    else
+    {
+      waitingForResponse = true;
+    }
   }
   else
   {
@@ -325,7 +346,17 @@ void callback(char *topic, byte *payload, unsigned int length)
     {
       modeFrisquet = String(message);
       modeFrisquetChanged = true;
-      handleModeChange(message);
+      handleModeChange(message,0x08);
+      startWaitTime = millis(); // On note le début de l’attente
+    }
+  }
+  else if (strcmp(topic, MODE_TOPIC2) == 0)
+  {
+    if (modeFrisquet2 != String(message))
+    {
+      modeFrisquet2 = String(message);
+      modeFrisquet2Changed = true;
+      handleModeChange(message,0x09);
       startWaitTime = millis(); // On note le début de l’attente
     }
   }
@@ -434,12 +465,15 @@ void connectToTopic()
   connectToSensor("tempExterieure", "exterieure");
   connectToSensor("tempConsigne1", "consigne Z1");
   connectToSensor("tempCDC", "corps de chauffe");
-  connectToSensor("tempECS", "eau chaude sanitaire");
+  
   connectToSensor("tempDepart", "depart");
   connectToSwitch("asssonde", "ass. sonde");
   connectToSwitch("assconnect", "ass. connect");
   connectToSwitch("erasenvs", "erase NVS");
-
+  if (sensorecs == true)
+  {
+    connectToSensor("tempECS", "eau chaude sanitaire");
+  }
   if (sensorZ2 == true)
   {
     connectToSensor("tempAmbiante2", "ambiante Z2");
@@ -468,7 +502,21 @@ void connectToTopic()
         "device":{"ids":["Frisquet_MQTT"],"mf":"HA Community","name":"Frisquet MQTT","mdl":"ESP32 Heltec"}
       })";
   client.publish(modeConfigTopic, modeConfigPayload, true); // true pour retenir le message
-
+  
+  // Publier le message de configuration pour MQTT du mode pour la zone 2 si active
+  if (sensorZ2 == true)
+  { 
+    char modeConfigTopic2[] = "homeassistant/select/frisquet/mode2/config";
+    char modeConfigPayload2[] = R"({
+          "uniq_id": "frisquet_mode2",
+          "name": "Mode Zone 2",
+          "state_topic": "homeassistant/select/frisquet/mode2/state",
+          "command_topic": "homeassistant/select/frisquet/mode2/set",
+          "options": ["Auto", "Confort", "Réduit", "Hors gel"],
+          "device":{"ids":["Frisquet_MQTT"],"mf":"HA Community","name":"Frisquet MQTT","mdl":"ESP32 Heltec"}
+        })";
+    client.publish(modeConfigTopic2, modeConfigPayload2, true); // true pour retenir le message
+  }
   // Publier le message de configuration pour MQTT de la consommation gaz pour le chauffage
   char consoChConfigTopic[] = "homeassistant/sensor/frisquet/consogaz-ch/config";
   char consoChConfigPayload[] = R"({
@@ -483,17 +531,20 @@ void connectToTopic()
   client.publish(consoChConfigTopic, consoChConfigPayload, true); // true pour retenir le message
 
    // Publier le message de configuration pour MQTT de la consommation gaz pour l'eau chaude
-  char consoEcsConfigTopic[] = "homeassistant/sensor/frisquet/consogaz-ecs/config";
-  char consoEcsConfigPayload[] = R"({
-        "uniq_id": "frisquet_consogaz_ecs",
-        "name": "consommation gaz ECS",
-        "state_topic": "homeassistant/sensor/frisquet/consogaz-ecs/state",
-        "unit_of_measurement": "kWh",
-        "device_class": "energy",
-        "state_class": "total",
-        "device":{"ids":["Frisquet_MQTT"],"mf":"HA Community","name":"Frisquet MQTT","mdl":"ESP32 Heltec"}
-      })";
-  client.publish(consoEcsConfigTopic, consoEcsConfigPayload, true); // true pour retenir le message
+  if (sensorecs == true)
+  { 
+    char consoEcsConfigTopic[] = "homeassistant/sensor/frisquet/consogaz-ecs/config";
+    char consoEcsConfigPayload[] = R"({
+          "uniq_id": "frisquet_consogaz_ecs",
+          "name": "consommation gaz ECS",
+          "state_topic": "homeassistant/sensor/frisquet/consogaz-ecs/state",
+          "unit_of_measurement": "kWh",
+          "device_class": "energy",
+          "state_class": "total",
+          "device":{"ids":["Frisquet_MQTT"],"mf":"HA Community","name":"Frisquet MQTT","mdl":"ESP32 Heltec"}
+        })";
+    client.publish(consoEcsConfigTopic, consoEcsConfigPayload, true); // true pour retenir le message
+  }
 
   // Souscrire aux topics temp ambiante, consigne, ext et mode
   client.subscribe(MODE_TOPIC);
@@ -506,6 +557,7 @@ void connectToTopic()
   if(sensorZ2) {
     client.subscribe(TEMP_CONSIGNE2_TOPIC);
     client.subscribe(TEMP_AMBIANTE2_TOPIC);
+    client.subscribe(MODE_TOPIC2);
   }
 }
 void setDefaultNetwork()
@@ -738,7 +790,34 @@ bool assFriCon()
   return result;
 }
 //****************************************************************************
-void initOTA();
+void initOTA()
+{
+  ArduinoOTA.setHostname("ESP32Frisquet");
+  ArduinoOTA.setTimeout(25); // Augmenter le délai d'attente à 25 secondes
+  ArduinoOTA
+      .onStart([]()
+               {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH)
+      type = "sketch";
+    else // U_SPIFFS
+      type = "filesystem";
+    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+    DBG_PRINTLN("Start updating " + type); })
+      .onEnd([]()
+             { DBG_PRINTLN(F("\nEnd")); })
+      .onProgress([](unsigned int progress, unsigned int total)
+                  { Serial.printf("Progress: %u%%\r", (progress / (total / 100))); })
+      .onError([](ota_error_t error)
+               {
+    Serial.printf("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) DBG_PRINTLN(F("Auth Failed"));
+    else if (error == OTA_BEGIN_ERROR) DBG_PRINTLN(F("Begin Failed"));
+    else if (error == OTA_CONNECT_ERROR) DBG_PRINTLN(F("Connect Failed"));
+    else if (error == OTA_RECEIVE_ERROR) DBG_PRINTLN(F("Receive Failed"));
+    else if (error == OTA_END_ERROR) DBG_PRINTLN(F("End Failed")); });
+  ArduinoOTA.begin();
+}
 //****************************************************************************
 void setFlag(void)
 {
@@ -808,11 +887,18 @@ void setup()
   preferences.end(); // Fermez la mémoire NVS ici
 }
 //****************************************************************************
-void adaptMod(uint8_t modeValue)
+void adaptMod(uint8_t modeValue,uint8_t zone)
 {
-  const char *topic = "homeassistant/select/frisquet/mode/state"; // Topic MQTT pour le mode
+  const char *topic;
+  if (zone == 0x09)
+  {
+    topic = "homeassistant/select/frisquet/mode2/state"; // Topic MQTT pour le mode
+  }
+  else 
+  {
+    topic = "homeassistant/select/frisquet/mode/state"; // Topic MQTT pour le mode
+  }
   const char *mode;
-
   // Traduire la valeur en un mode texte
   switch (modeValue)
   {
@@ -840,6 +926,7 @@ void adaptMod(uint8_t modeValue)
   }
   else
   {
+    Serial.printf("Erreur lors de la publication du mode !");
     DBG_PRINTLN("Erreur lors de la publication du mode !");
   }
 }
@@ -855,12 +942,15 @@ void handleRadioPacket(byte *byteArr, int len)
     {
       if (byteArr[0] == 0x7e && byteArr[1] == 0x80 && byteArr[3] == msg79e0 && byteArr[4] == 0x81 && byteArr[5] == 0x03)
       {
-        // Extract bytes 8 and 9 ECS
-        int decimalValue1 = byteArr[7] << 8 | byteArr[8];
-        float ecsValue = decimalValue1 / 10.0;
-        char tempECS[10];
-        snprintf(tempECS, sizeof(tempECS), "%.2f", ecsValue);
-        publishMessage("homeassistant/sensor/frisquet/tempECS/state", tempECS);
+        if (sensorecs == true)
+        {
+          // Extract bytes 8 and 9 ECS
+          int decimalValue1 = byteArr[7] << 8 | byteArr[8];
+          float ecsValue = decimalValue1 / 10.0;
+          char tempECS[10];
+          snprintf(tempECS, sizeof(tempECS), "%.2f", ecsValue);
+          publishMessage("homeassistant/sensor/frisquet/tempECS/state", tempECS);
+        }
         // Extract bytes 10 and 11 CDC
         int decimalValue2 = byteArr[9] << 8 | byteArr[10];
         float cdcValue = decimalValue2 / 10.0;
@@ -894,18 +984,21 @@ void handleRadioPacket(byte *byteArr, int len)
         char consoGazCh[10];
         snprintf(consoGazCh, sizeof(consoGazCh), "%d", decimalValue1);
         publishMessage("homeassistant/sensor/frisquet/consogaz-ch/state", consoGazCh);
-
-        // Extract bytes 26 and 27 conso gaz de la veille
-        int decimalValue2 = byteArr[25] << 8 | byteArr[26];
-        // float gazValue = decimalValue1;
-        char consoGazEcs[10];
-        snprintf(consoGazEcs, sizeof(consoGazEcs), "%d", decimalValue2);
-        publishMessage("homeassistant/sensor/frisquet/consogaz-ecs/state", consoGazEcs);
+        if (sensorecs == true)
+        {
+          // Extract bytes 26 and 27 conso gaz de la veille
+          int decimalValue2 = byteArr[25] << 8 | byteArr[26];
+          // float gazValue = decimalValue1;
+          char consoGazEcs[10];
+          snprintf(consoGazEcs, sizeof(consoGazEcs), "%d", decimalValue2);
+          publishMessage("homeassistant/sensor/frisquet/consogaz-ecs/state", consoGazEcs);
+        }
       }
       else if (byteArr[0] == 0x7e && byteArr[1] == 0x80 && byteArr[4] == 0x08 && byteArr[5] == 0x17)
       {
         TxByteArrConRep[2] = custom_friCon_id;
         TxByteArrConRep[3] = byteArr[3];
+        TxByteArrConRep[4] = byteArr[4];
         memcpy(&TxByteArrConRep[7], &byteArr[15], 41); // Copie 41 octets depuis byteArr[15] dans TxByteArrConRep[7]
         // Envoi de la chaine d'association
         int State = radio.transmit(TxByteArrConRep, sizeof(TxByteArrConRep));
@@ -913,18 +1006,42 @@ void handleRadioPacket(byte *byteArr, int len)
         {
           //  Appeler adaptMod avec la valeur extraite de byteArr[10]
           uint8_t modeValue = TxByteArrConRep[10];
-          adaptMod(modeValue);
+          uint8_t zone = TxByteArrConRep[4];
+          adaptMod(modeValue,zone);
         }
         else
         {
           DBG_PRINTLN("Erreur lors de la transmission !");
         }
       }
+      else if (byteArr[0] == 0x7e && byteArr[1] == 0x80 && byteArr[4] == 0x09 && byteArr[5] == 0x17)
+      {
+        TxByteArrConRep[2] = custom_friCon_id;
+        TxByteArrConRep[3] = byteArr[3];
+        TxByteArrConRep[4] = byteArr[4];
+        memcpy(&TxByteArrConRep[7], &byteArr[15], 41); // Copie 41 octets depuis byteArr[15] dans TxByteArrConRep[7]
+        // Envoi de la chaine d'association
+        int State = radio.transmit(TxByteArrConRep, sizeof(TxByteArrConRep));
+        if (State == RADIOLIB_ERR_NONE)
+        {
+          //  Appeler adaptMod avec la valeur extraite de byteArr[10]
+          uint8_t mode2Value = TxByteArrConRep[10];
+          uint8_t zone = TxByteArrConRep[4];
+          adaptMod(mode2Value,zone);
+        }
+        else
+        {
+          DBG_PRINTLN("Erreur lors de la transmission !");
+        }
+      }
+    
     }
+
     else if (len == 55 && byteArr[0] == 0x7e && byteArr[1] == 0x80 && byteArr[4] == 0x88 && byteArr[5] == 0x17)
     {
       uint8_t modeValue = byteArr[10];
-      adaptMod(modeValue);
+      uint8_t zone = byteArr[4];
+      adaptMod(modeValue,zone);
       waitingForResponse = false;
     }
   }
@@ -1117,7 +1234,28 @@ void loop()
         // Réenvoi toutes les 2 secondes
         if (currentTime - lastTxModeTime >= retryInterval)
         {
-          handleModeChange(modeFrisquet.c_str());
+          handleModeChange(modeFrisquet.c_str(),0x08);
+          // int state = radio.transmit(TxByteArrConMod, sizeof(TxByteArrConMod));
+          lastTxModeTime = currentTime;
+        }
+      }
+    }
+    if (waitingForResponse2)
+    {
+      unsigned long currentTime = millis();
+
+      // Vérification du timeout des 4 minutes
+      if (currentTime - startWaitTime >= maxWaitTime)
+      {
+        waitingForResponse2 = false;
+        DBG_PRINTLN("Timeout mode");
+      }
+      else
+      {
+        // Réenvoi toutes les 2 secondes
+        if (currentTime - lastTxModeTime >= retryInterval)
+        {
+          handleModeChange(modeFrisquet2.c_str(),0x09);
           // int state = radio.transmit(TxByteArrConMod, sizeof(TxByteArrConMod));
           lastTxModeTime = currentTime;
         }
@@ -1140,31 +1278,4 @@ String byteArrayToHexString(uint8_t *byteArray, int length)
   return result;
 }
 //************************************************************
-void initOTA()
-{
-  ArduinoOTA.setHostname("ESP32Frisquet");
-  ArduinoOTA.setTimeout(25); // Augmenter le délai d'attente à 25 secondes
-  ArduinoOTA
-      .onStart([]()
-               {
-    String type;
-    if (ArduinoOTA.getCommand() == U_FLASH)
-      type = "sketch";
-    else // U_SPIFFS
-      type = "filesystem";
-    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-    DBG_PRINTLN("Start updating " + type); })
-      .onEnd([]()
-             { DBG_PRINTLN(F("\nEnd")); })
-      .onProgress([](unsigned int progress, unsigned int total)
-                  { Serial.printf("Progress: %u%%\r", (progress / (total / 100))); })
-      .onError([](ota_error_t error)
-               {
-    Serial.printf("Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR) DBG_PRINTLN(F("Auth Failed"));
-    else if (error == OTA_BEGIN_ERROR) DBG_PRINTLN(F("Begin Failed"));
-    else if (error == OTA_CONNECT_ERROR) DBG_PRINTLN(F("Connect Failed"));
-    else if (error == OTA_RECEIVE_ERROR) DBG_PRINTLN(F("Receive Failed"));
-    else if (error == OTA_END_ERROR) DBG_PRINTLN(F("End Failed")); });
-  ArduinoOTA.begin();
-}
+
