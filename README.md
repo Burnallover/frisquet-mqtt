@@ -4,14 +4,21 @@ This Arduino code is designed for a Heltec WiFi LoRa 32 V3. It will automaticall
 - Setpoint temperature
 - Exterior temperature
 - payload received
+- Ecs temperature
+- start temperature
+- Cdc temperature
+- Gas heating consumption
+- Gas water heating consumption
   
 Buttons are :
 
 - switch to initiate the association of an emulated external temperature sensor
 - switch to initiate the association of an emulated Frisquet connect box
+- switch to erase the NVS memory of the ESP32
 
 Input select :
 
+- prefilled mode to manage heating mode of the boiler
 - prefilled mode to manage heating mode of the boiler
 
 Some of this code was found on https://forum.hacf.fr/t/pilotage-chaudiere-frisquet-eco-radio-system-visio/19814/90
@@ -25,7 +32,7 @@ Some of this code was found on https://forum.hacf.fr/t/pilotage-chaudiere-frisqu
 
 # Configuration
 
-Add your Wifi and Mqtt information in the file named 'config.h'
+Add your Wifi and Mqtt information in the file named 'conf.example.h' and rename it conf.h
 ```bash
  // Configuration Wifi
  const char* ssid = "ssid wifi";  // Mettre votre SSID Wifi
@@ -80,6 +87,45 @@ If the exterior temperature sensor is correctly bound, you can begin the associa
 5. The boiler should indicate that the exterior sensor is associated, and the "ass. sonde" button should return to off.
 
 That's all; after 10 minutes, Heltec screen should update, you should have the exterior temperature displayed on the boiler screen and on the interior satellite screen.
+
+# Bind the gas consumption on the dashboard energy of HA
+
+The boiler only sends the previous day's gas consumption data, and this value is not cumulative. Therefore, it is necessary to add an automation in Home Assistant to daily reset this value and provide an accurate sensor.
+Here is the yaml code to create the automation :
+```bash 
+alias: maj consogaz
+description: ""
+triggers:
+  - trigger: time_pattern
+    hours: "00"
+    minutes: "00"
+    seconds: "00"
+conditions: []
+actions:
+  - action: mqtt.publish
+    data:
+      evaluate_payload: false
+      qos: "1"
+      retain: false
+      topic: homeassistant/sensor/frisquet/consogaz-ch/state
+      payload: |-
+        {{
+        0
+        }}
+  - action: mqtt.publish
+    metadata: {}
+    data:
+      evaluate_payload: false
+      qos: 0
+      retain: false
+      topic: homeassistant/sensor/frisquet/consogaz-ecs/state
+      payload: |-
+        {{
+        0
+        }}
+mode: single
+
+```
 
 # Tweak
 After the initial association, the network ID and the exterior sensor ID are written on the first line of the Heltec's screen as well as in the console. Even though this data is normally stored in the ESP's NVS memory, I advise you to save them to avoid starting over in case of a major update that would overwrite this memory.

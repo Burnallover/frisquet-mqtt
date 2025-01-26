@@ -525,7 +525,7 @@ void connectToTopic()
         "state_topic": "homeassistant/sensor/frisquet/consogaz-ch/state",
         "unit_of_measurement": "kWh",
         "device_class": "energy",
-        "state_class": "total",
+        "state_class": "total_increasing",
         "device":{"ids":["Frisquet_MQTT"],"mf":"HA Community","name":"Frisquet MQTT","mdl":"ESP32 Heltec"}
       })";
   client.publish(consoChConfigTopic, consoChConfigPayload, true); // true pour retenir le message
@@ -1190,7 +1190,7 @@ void loop()
         // On remet à zéro l'index et on indique qu'il faut envoyer 4 trames
         conMsgIndex = 0;
         conMsgToSendCount = 4;
-        lastConMsgTime = currentTime; // on remet le timer à zéro
+        //lastConMsgTime = currentTime; // on remet le timer à zéro
         sequenceMsg = !sequenceMsg;
       }
       else
