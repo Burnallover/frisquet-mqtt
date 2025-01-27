@@ -101,7 +101,7 @@ payload_template: "{{ state_attr('weather.XXXXXX', 'temperature') }}"
 # Association du capteur de température extérieure
 
 1. Sur la chaudière, accédez au menu de configuration, modifiez le mode de régulation actuel et sélectionnez la ligne « température ambiante + extérieure ».
-2. Calculez la « pente » en fonction de votre région et altitude et entrez cette valeur lorsque demandé.
+2. Si possible, Calculez la « pente » en fonction de votre région et altitude et entrez cette valeur lorsque demandé.
 3. Appuyez sur OK jusqu’à ce que l’écran demande d’associer le capteur extérieur.
 4. Dans Home Assistant, activez l’interrupteur mentionnant « ass. sonde ».
 5. La chaudière devrait indiquer que le capteur extérieur est associé, et le bouton « ass. sonde » devrait se désactiver automatiquement.
