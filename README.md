@@ -2,6 +2,8 @@
 
 This Arduino code is designed for a Heltec WiFi LoRa 32 V3. It will automatically create sensors, buttons and an input select in Home Assistant using MQTT discovery. The sensors are as follows:
 
+## Sensors :
+
 - Actual temperature
 - Setpoint temperature
 - Exterior temperature
@@ -12,25 +14,29 @@ This Arduino code is designed for a Heltec WiFi LoRa 32 V3. It will automaticall
 - Gas heating consumption
 - Gas water heating consumption
   
-Buttons are :
+## Buttons :
 
 - switch to initiate the association of an emulated external temperature sensor
 - switch to initiate the association of an emulated Frisquet connect box
 - switch to erase the NVS memory of the ESP32
 
-Input select :
+## Input select :
 
 - prefilled mode to manage heating mode of the boiler for default zone
 - prefilled mode to manage heating mode of the boiler for second zone if activated
 
 Some of this code was found on https://forum.hacf.fr/t/pilotage-chaudiere-frisquet-eco-radio-system-visio/19814/90
- 
+
+---
+
 # Requirement
 
 1. Mosquitto broker installed and linked with Home assistant
 2. user and password for mqtt 
 3. IP of Mosquitto broker
 4. SSID and password of the wifi
+
+---
 
 # Configuration
 
@@ -53,6 +59,8 @@ If you have a second Zone, and/or water heating on your boiler model, you can mo
  const bool sensorecs = false;
 ```
 You can now, flash your Heltec device.
+
+---
 
 # Bind your external temp sensor on mqtt
 
@@ -84,6 +92,8 @@ Though not very accurate, it does the job.
 
 3. Verify if the temperature is correctly sent to the ESP by looking at the screen or directly in the device on HA.
 
+---
+
 # Exterior temperature sensor Association
 
 If the exterior temperature sensor is correctly bound, you can begin the association of the exterior temperature sensor.
@@ -96,6 +106,8 @@ If the exterior temperature sensor is correctly bound, you can begin the associa
 
 That's all; after 10 minutes, Heltec screen should update, you should have the exterior temperature displayed on the boiler screen and on the interior satellite screen.
 
+---
+
 # Emulated frisquet connect Association
 
 1. On the boiler, go to the configuration menu, launch the frisquet connect association
@@ -104,6 +116,8 @@ That's all; after 10 minutes, Heltec screen should update, you should have the e
 4. The boiler should indicate that the Frisquet connect is associated, and the "ass. connect" button should return to off.
 
 Note that before you can change the mode of the boiler, you should first change the mode with the satellite at each reboot of the ESP, or directly replace the correct byte array 'TxByteArrConMod' with your actual configuration, or you will have your configuration replaced by mine :D (this part will be improved in the future)
+
+---
 
 # Bind the gas consumption on the dashboard energy of HA
 
