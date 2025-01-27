@@ -1,4 +1,5 @@
 [English](README.md) | [Français](README.fr.md)
+
 This Arduino code is designed for a Heltec WiFi LoRa 32 V3. It will automatically create sensors, buttons and an input select in Home Assistant using MQTT discovery. The sensors are as follows:
 
 - Actual temperature
