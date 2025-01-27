@@ -540,7 +540,7 @@ void connectToTopic()
           "state_topic": "homeassistant/sensor/frisquet/consogaz-ecs/state",
           "unit_of_measurement": "kWh",
           "device_class": "energy",
-          "state_class": "total",
+          "state_class": "total_increasing",
           "device":{"ids":["Frisquet_MQTT"],"mf":"HA Community","name":"Frisquet MQTT","mdl":"ESP32 Heltec"}
         })";
     client.publish(consoEcsConfigTopic, consoEcsConfigPayload, true); // true pour retenir le message
@@ -1000,7 +1000,9 @@ void handleRadioPacket(byte *byteArr, int len)
         TxByteArrConRep[3] = byteArr[3];
         TxByteArrConRep[4] = byteArr[4];
         memcpy(&TxByteArrConRep[7], &byteArr[15], 41); // Copie 41 octets depuis byteArr[15] dans TxByteArrConRep[7]
-        // Envoi de la chaine d'association
+        memcpy(&TxByteArrConMod[15], &byteArr[15], 48); // Copie 48 octets depuis byteArr[15] dans TxByteArrConMod[7]
+
+        // Envoi de la confirmation de reception
         int State = radio.transmit(TxByteArrConRep, sizeof(TxByteArrConRep));
         if (State == RADIOLIB_ERR_NONE)
         {
